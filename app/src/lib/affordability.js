@@ -4,14 +4,15 @@
 // taxes, assets, the departing residence's carrying cost); only price, loan
 // terms, property tax, and carrying costs vary by property.
 //
-// This first pass intentionally keeps net-income to a 2025-actuals-based
-// approximation (AGI minus actual federal/MI tax minus computed FICA) rather
-// than the full bracket-aware, forward-looking projection that belongs on
-// the dedicated Tax Impact screen (BUILD_SPEC.md screen #7) -- the spec's
-// suggested build order explicitly allows the Dashboard to start simple and
-// get something correct and visible before that screen exists.
+// Net income here uses the same bracket-aware itemization benefit and
+// first-principles FICA as the Tax Impact and Household Budget screens
+// (via computeFICA/computeItemizationBenefit), so all three screens agree
+// with each other rather than each keeping a slightly different net-income
+// approximation that has to be reconciled after the fact.
 import { fieldValue } from "./fields";
 import { monthlyPrincipalAndInterest } from "./mortgage";
+import { generateSchedule, yearlyTotals } from "./amortization";
+import { computeFICA, computeItemizationBenefit } from "./tax";
 
 const LOW_SURPLUS_THRESHOLD = 1000;
 
@@ -41,23 +42,53 @@ export function computeAffordability(household, property) {
   const allInMonthlyNewHouse =
     pitiMonthly + insuranceMonthly + maintenanceMonthly + utilitiesMonthly + hoaMonthly;
 
-  // --- Net household income (2025-actuals approximation; see header note) ---
-  const agi = v(household.income?.adjustedGrossIncome) || 0;
-  const fedTax = v(household.taxes?.federalIncomeTaxActual2025) || 0;
+  // --- Net household income: gross wages/investment income minus federal
+  // (itemization-adjusted), MI, and FICA (first-principles, no city tax --
+  // eliminated by the move). Same methodology as the Household Budget and
+  // Tax Impact screens' "With House" figures. ---
+  const grossAnnualIncome =
+    (v(household.income?.adamW2Wages) || 0) +
+    (v(household.payrollDeductions?.adam401kAnnual) || 0) +
+    (v(household.payrollDeductions?.adamHsaAnnual) || 0) +
+    (v(household.income?.spouseW2Wages) || 0) +
+    (v(household.payrollDeductions?.spouse401kAnnual) || 0) +
+    (v(household.income?.taxableInterest) || 0) +
+    (v(household.income?.ordinaryDividends) || 0);
+
+  const year1Interest = (yearlyTotals(generateSchedule(loanAmount, rate, term))[0] || { interestPaid: 0 }).interestPaid;
+  const itemization = computeItemizationBenefit(household, year1Interest, annualPropertyTax);
+  const fedTaxAfterItemizing = (v(household.taxes?.federalIncomeTaxActual2025) || 0) - itemization.benefit;
   const miTax = v(household.taxes?.michiganIncomeTaxActual2025) || 0;
-  const fica = v(household.taxes?.ficaComputed) || 0;
-  const netAnnualIncome = agi - fedTax - miTax - fica;
+  const fica = computeFICA(household).total;
+
+  const netAnnualIncome = grossAnnualIncome - fedTaxAfterItemizing - miTax - fica;
   const netMonthlyIncome = netAnnualIncome / 12;
 
   // --- Recurring expenses ---
   const nonHousingExpensesMonthly = v(household.householdBudget?.nonHousingLivingExpensesMonthly) || 0;
   const childcareMonthly = v(household.householdBudget?.childcareMonthly) || 0;
   const currentHouseCarryMonthly = v(household.secondHomeCarryingCost?.totalMonthlyCashCarry) || 0;
+  // Real recurring debt (e.g. Lauren's student loan) -- omitting this would
+  // silently inflate the surplus, per BUILD_SPEC.md calc note #10 (the same
+  // debt inputs used for DTI must also be used here).
+  const otherMonthlyDebtPayments = v(household.assetsAndDebts?.otherMonthlyDebtPayments) || 0;
+  // netMonthlyIncome above is gross wages MINUS TAXES ONLY -- 401(k)/HSA/
+  // health-premium payroll deductions are deliberately not subtracted yet
+  // (same convention as the original spreadsheet's "Total Income (A)" row:
+  // "401(k), HSA, and health insurance premiums are NOT subtracted here --
+  // they show up as real expense lines below"). They have to be subtracted
+  // here, or the surplus is overstated by the full deduction amount.
+  const payrollDeductionsMonthly =
+    ((v(household.payrollDeductions?.adam401kAnnual) || 0) +
+      (v(household.payrollDeductions?.spouse401kAnnual) || 0) +
+      (v(household.payrollDeductions?.adamHsaAnnual) || 0) +
+      (v(household.payrollDeductions?.healthInsurancePremiumsAnnual) || 0)) /
+    12;
 
   const surplusOverlap =
-    netMonthlyIncome - nonHousingExpensesMonthly - childcareMonthly - currentHouseCarryMonthly - allInMonthlyNewHouse;
+    netMonthlyIncome - payrollDeductionsMonthly - nonHousingExpensesMonthly - childcareMonthly - currentHouseCarryMonthly - allInMonthlyNewHouse - otherMonthlyDebtPayments;
   const surplusSteadyState =
-    netMonthlyIncome - nonHousingExpensesMonthly - childcareMonthly - allInMonthlyNewHouse;
+    netMonthlyIncome - payrollDeductionsMonthly - nonHousingExpensesMonthly - childcareMonthly - allInMonthlyNewHouse - otherMonthlyDebtPayments;
 
   // --- Cash to close ---
   const buyerClosingCostsPct = v(property.carryingCosts?.buyerClosingCostsPctOfPrice) || 0;
@@ -114,9 +145,11 @@ export function computeAffordability(household, property) {
     pitiMonthly,
     allInMonthlyNewHouse,
     netMonthlyIncome,
+    payrollDeductionsMonthly,
     nonHousingExpensesMonthly,
     childcareMonthly,
     currentHouseCarryMonthly,
+    otherMonthlyDebtPayments,
     surplusOverlap,
     surplusSteadyState,
     cashRequiredAtClosing,

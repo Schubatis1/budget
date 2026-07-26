@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Layout from "./components/Layout";
 import Compare from "./pages/Compare";
 import Dashboard from "./pages/Dashboard";
+import HouseholdBudget from "./pages/HouseholdBudget";
 import MonthlyCost from "./pages/MonthlyCost";
 import CashToClose from "./pages/CashToClose";
 import Affordability from "./pages/Affordability";
@@ -73,6 +74,7 @@ function HouseholdGate() {
           <Route index element={<Navigate to="/compare" replace />} />
           <Route path="compare" element={<Compare />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="household-budget" element={<HouseholdBudget />} />
           <Route path="inputs" element={<Inputs />} />
           <Route path="monthly-cost" element={<MonthlyCost />} />
           <Route path="cash-to-close" element={<CashToClose />} />

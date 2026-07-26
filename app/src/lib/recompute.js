@@ -51,6 +51,30 @@ export function monthsBetween(startDate, endDate) {
   return Math.max(days / 30.4368, 1 / 30.4368);
 }
 
+// Per-budget-line monthly breakdown, for the Household Budget screen. Unlike
+// computeBudgetFromTransactions above, this does NOT drop housing or savings
+// lines -- it's used to render every line individually, not collapse them
+// into one non-housing total.
+export function computeLineBreakdown(transactions, { startDate, endDate, excludeLinkedCard = true }) {
+  const byLine = {};
+  for (const t of transactions) {
+    if (startDate && t.date < startDate) continue;
+    if (endDate && t.date > endDate) continue;
+    if (!t.budgetLine) continue;
+    if (t.budgetLine.startsWith("Exclude - ")) continue;
+    if (t.oneTimeExcluded) continue;
+    if (excludeLinkedCard && t.linkedCardPaymentExcluded) continue;
+    if (t.rewardsCreditExcluded) continue;
+    byLine[t.budgetLine] = (byLine[t.budgetLine] || 0) + t.signedAmount;
+  }
+  const months = monthsBetween(startDate, endDate);
+  const monthlyByLine = {};
+  for (const [line, total] of Object.entries(byLine)) {
+    monthlyByLine[line] = months > 0 ? total / months : 0;
+  }
+  return { monthlyByLine, months };
+}
+
 export function housingLineSet(budgetLineTaxonomy) {
   const set = new Set();
   if (!budgetLineTaxonomy) return set;

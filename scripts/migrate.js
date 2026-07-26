@@ -147,6 +147,14 @@ function buildHousehold(root) {
       version: model["@_version"] || null,
       allowlistedUids: [], // bootstrap manually in the Firebase console per BUILD_SPEC.md
     },
+    // Not present in the source XML -- added later directly in Firestore via
+    // the app's own Household Budget screen. Included here with the same
+    // values so a future re-run of this one-time script (which does a full
+    // .set(), not a merge) doesn't silently wipe it.
+    familySize: {
+      adults: { value: 2, needsReview: false, note: "" },
+      children: { value: 0, needsReview: false, note: "" },
+    },
     income: transformContainer(h.income),
     payrollDeductions: transformContainer(h.payrollDeductions),
     payStubActuals: h.payStubActuals ? transformContainer(h.payStubActuals) : null,

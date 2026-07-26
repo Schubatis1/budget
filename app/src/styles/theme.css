@@ -844,6 +844,60 @@ label.field-label {
   .transaction-row-amount { text-align: left; }
 }
 
+/* ---------- Household Budget screen ---------- */
+
+.hb-family-row { display: flex; gap: 20px; flex-wrap: wrap; }
+.hb-family-row .input-row { flex: 1; min-width: 140px; border-top: none; padding: 0; }
+
+.hb-subblock-title {
+  font-family: var(--font-caps);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--coral-dark);
+  margin: 14px 0 4px;
+}
+.hb-subblock-title:first-of-type { margin-top: 4px; }
+
+.hb-table { display: flex; flex-direction: column; }
+.hb-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 90px 100px;
+  gap: 8px;
+  padding: 6px 2px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.83rem;
+  align-items: center;
+}
+.hb-row span:not(:first-child) { text-align: right; }
+.hb-row.hb-header {
+  font-family: var(--font-caps);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 2px solid var(--border);
+}
+.hb-row.hb-total {
+  border-top: 2px solid var(--border);
+  border-bottom: none;
+  margin-top: 4px;
+  padding-top: 10px;
+  font-weight: 800;
+  color: var(--navy);
+}
+.hb-row.hb-total span.negative { color: var(--status-critical); }
+
+.hb-reconcile-row { font-size: 0.85rem; margin-bottom: 10px; }
+.hb-reconcile-row:last-child { margin-bottom: 0; }
+
+@media (max-width: 560px) {
+  .hb-table { overflow-x: auto; }
+  .hb-row { grid-template-columns: 140px 80px 80px 90px; min-width: 390px; }
+}
+
 .access-uid-list { display: flex; flex-direction: column; gap: 8px; }
 .access-uid-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--bg); border-radius: var(--radius-sm); }
 .access-uid-row code { flex: 1; font-size: 0.82rem; word-break: break-all; }

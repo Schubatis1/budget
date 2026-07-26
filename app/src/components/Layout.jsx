@@ -7,6 +7,7 @@ import { formatCurrency } from "../lib/format";
 const NAV_ITEMS = [
   { to: "/compare", label: "Compare" },
   { to: "/dashboard", label: "Dashboard" },
+  { to: "/household-budget", label: "Household Budget" },
   { to: "/inputs", label: "Inputs" },
   { to: "/monthly-cost", label: "Monthly Cost" },
   { to: "/cash-to-close", label: "Cash to Close" },
