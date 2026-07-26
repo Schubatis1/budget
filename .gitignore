@@ -1,2 +1,18 @@
 Web Exports/
 .claude/settings.local.json
+
+# Sensitive financial data and credentials -- never commit
+secrets/
+Design Docs/*.xml
+node_modules/
+dist/
+.env
+.env.*
+firestore-debug.log
+ui-debug.log
+.firebase/
+
+# HGTV/Scripps copyrighted House Hunters International brand assets -- local
+# design reference only, never committed to this public repo. The app's own
+# house mark (app/src/components/HouseMark.jsx) is an original redraw.
+assets/

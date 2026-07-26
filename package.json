@@ -1,0 +1,17 @@
+{
+  "name": "budget-tooling",
+  "private": true,
+  "description": "Repo-root tooling: Firebase emulator/deploy commands and the one-time XML->Firestore migration script. The actual web app lives in app/.",
+  "scripts": {
+    "emulators": "firebase emulators:start --only firestore,auth",
+    "rules:test": "firebase emulators:exec --only firestore \"node scripts/test-rules.js\"",
+    "migrate": "node scripts/migrate.js"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "fast-xml-parser": "^5.10.1",
+    "firebase": "^12.16.0",
+    "firebase-admin": "^14.2.0",
+    "firebase-tools": "^15.24.0"
+  }
+}

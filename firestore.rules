@@ -1,0 +1,46 @@
+rules_version = '2';
+
+// Access model: exactly one household document, gated by an explicit UID
+// allowlist stored on that document (meta.allowlistedUids). Being authenticated
+// with Firebase Auth is NOT sufficient on its own -- it only proves who is
+// asking. Every rule below re-checks the allowlist on the parent household
+// document, including for nested subcollections (properties, transactions),
+// because Firestore rules do not automatically inherit from a parent path.
+//
+// Deliberately no "allow if request.auth != null" fallback anywhere in this
+// file -- that would let any authenticated user in the Firebase project read
+// this household's financial data, not just invited ones.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // For a subcollection document, `resource` is the child doc, not the
+    // household doc, so we have to fetch the parent explicitly to read its
+    // allowlist. For the household doc's own rule below, `resource.data` is
+    // already the household doc, so that one skips the extra get().
+    function isAllowlistedViaParent(householdId) {
+      return request.auth != null &&
+        request.auth.uid in
+          get(/databases/$(database)/documents/households/$(householdId)).data.meta.allowlistedUids;
+    }
+
+    match /households/{householdId} {
+      allow read, update, delete: if request.auth != null &&
+        request.auth.uid in resource.data.meta.allowlistedUids;
+      // No `create` rule: the household document is seeded once by the
+      // migration script via the Admin SDK, which bypasses these rules
+      // entirely. Clients are never expected to create a household document.
+
+      match /properties/{propertyId} {
+        allow read, write: if isAllowlistedViaParent(householdId);
+      }
+
+      match /transactions/{transactionId} {
+        allow read, write: if isAllowlistedViaParent(householdId);
+      }
+    }
+
+    // Deny everything else by default (implicit -- Firestore rules default
+    // deny when no match applies -- stated here for clarity, not required).
+  }
+}
